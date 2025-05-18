@@ -1,5 +1,5 @@
 Flask
-Flash-Cors
+Flask-Cors
 openai
 PyMuPDF
 gunicorn
