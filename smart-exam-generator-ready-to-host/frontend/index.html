@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Exam Generator</title>
+  <!-- Bootstrap CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    body {
+      scroll-behavior: smooth;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .section-divider {
+      padding-top: 5rem;
+      padding-bottom: 5rem;
+    }
+  </style>
+</head>
+
+
+
+
+<body>
+
+<section class="vh-100 d-flex align-items-center justify-content-center text-center bg-primary text-white" id="welcome">
+  <div class="container">
+    <h1 class="display-4 fw-bold mb-3">Welcome to Smart Exam Generator</h1>
+    <p class="lead">Upload. Generate. Export. Instantly create exam questions using AI from your own material in seconds.</p>
+    <button class="btn btn-light btn-lg mt-4" onclick="scrollToSection('who')">Start Generating</button>
+  </div>
+</section>
+
+<section class="section-divider bg-white text-center border-top pt-5 pb-5" id="who">
+  <div class="container">
+    <h2 class="mb-4">Who Are We?</h2>
+    <p class="lead mb-4">We’re a passionate group of developers, educators, and AI enthusiasts dedicated to simplifying exam creation. Our mission is to empower teachers with intelligent tools that adapt to the unique pace of learning in the classroom.</p>
+    <p class="text-muted">With Smart Exam Generator, we blend innovation with practicality, delivering fast, flexible, and user-friendly test generation backed by the latest advancements in AI.</p>
+  </div>
+</section>
+
+<section class="section-divider bg-light text-center border-top pt-5 pb-5">
+  <div class="container">
+    <h2 class="mb-4">Why Use Our Tool?</h2>
+    <p class="lead">We all know creating exams is time-consuming, repetitive, and often overwhelming—especially during busy semesters. That’s where we come in!</p>
+    <p class="text-muted">Smart Exam Generator is your secret weapon. Just upload your material, select a difficulty, and let our AI do the rest. Whether you're prepping midterms, finals, or quick quizzes, our tool saves hours of effort while helping you deliver quality assessments faster than ever. 🕒✨</p>
+  </div>
+</section>
+
+<section class="section-divider bg-white text-center border-top pt-5 pb-5" id="generator">
+  <div class="container">
+    <h2 class="mb-4">✨ Exam Generator</h2>
+    <p class="text-muted mb-4">Upload your learning materials or paste text manually. Choose a difficulty level and let our AI generate tailored exam questions for you.</p>
+
+    <input type="file" class="form-control w-50 mx-auto mb-3" accept=".pdf" id="pdf-upload">
+    <textarea id="manual-input" class="form-control mb-3" rows="6" placeholder="Paste content here..."></textarea>
+
+    <select id="difficulty-select" class="form-select w-25 mx-auto mb-3">
+      <option selected value="medium">Medium</option>
+      <option value="easy">Easy</option>
+      <option value="hard">Hard</option>
+    </select>
+
+    <button class="btn btn-primary mb-3" onclick="uploadFile()">Upload & Extract PDF</button>
+    <button class="btn btn-success btn-lg mb-5" onclick="generateQuestions()">Generate Questions</button>
+
+    <div class="mt-5">
+      <h4>📄 Extracted Content</h4>
+      <pre id="extracted-content" class="bg-light border rounded p-3 text-start" style="max-height: 150px; overflow: hidden; position: relative;">
+        <span id="extracted-preview">No content uploaded yet.</span>
+        <a id="show-more-link" href="#" onclick="toggleContent(event)" style="position: absolute; bottom: 0; right: 1rem; background: white;">Show more</a>
+      </pre>
+
+      <h4 class="mt-4">🧠 Generated Questions</h4>
+      <pre id="generated-questions" class="bg-light border rounded p-3 text-start">Questions will appear here...</pre>
+    </div>
+  </div>
+</section>
+
+
+
+<script>
+  let isExpanded = false;
+
+  function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function uploadFile() {
+    const fileInput = document.getElementById("pdf-upload");
+    const file = fileInput.files[0];
+    if (!file) {
+      alert("Please select a PDF file first.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    fetch("http://127.0.0.1:5000/upload", {
+      method: "POST",
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        const fullText = data.text || "No content extracted.";
+        const shortText = fullText.length > 500 ? fullText.substring(0, 500) + "..." : fullText;
+        document.getElementById("manual-input").value = fullText;
+        document.getElementById("extracted-preview").textContent = shortText;
+        document.getElementById("show-more-link").style.display = fullText.length > 500 ? 'inline' : 'none';
+        isExpanded = false;
+      })
+      .catch(err => {
+        document.getElementById("extracted-preview").textContent = "⚠️ Upload failed: " + err.message;
+      });
+  }
+
+  function toggleContent(event) {
+    event.preventDefault();
+    const fullText = document.getElementById("manual-input").value;
+    const preview = document.getElementById("extracted-preview");
+    const link = document.getElementById("show-more-link");
+
+    if (isExpanded) {
+      preview.textContent = fullText.substring(0, 500) + "...";
+      link.textContent = "Show more";
+    } else {
+      preview.textContent = fullText;
+      link.textContent = "Show less";
+    }
+
+    isExpanded = !isExpanded;
+  }
+
+  function generateQuestions() {
+    const text = document.getElementById("manual-input").value;
+    const difficulty = document.getElementById("difficulty-select").value;
+
+    if (!text.trim()) {
+      alert("Please upload a file or paste some content first.");
+      return;
+    }
+
+    fetch("http://127.0.0.1:5000/generate_questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, difficulty })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.questions) {
+          document.getElementById("generated-questions").textContent = data.questions;
+        } else {
+          document.getElementById("generated-questions").textContent = "❌ An error occurred generating questions.";
+        }
+      })
+      .catch(err => {
+        document.getElementById("generated-questions").textContent = "⚠️ Server error: " + err.message;
+      });
+  }
+</script>
+
+
+<!-- Add this to the bottom of the page before </body> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const questions = document.getElementById("generated-questions").textContent;
+    if (!questions || questions.includes("Questions will appear") || questions.includes("error")) {
+      alert("No valid questions to export!");
+      return;
+    }
+
+    doc.setFontSize(16);
+    doc.text("Smart Exam – AI Generated", 20, 20);
+    doc.setFontSize(12);
+    doc.text("Name: _______________________________", 20, 35);
+    doc.text("Surname: ____________________________", 20, 45);
+    doc.text(" ", 10, 55); // spacing
+
+    const lines = doc.splitTextToSize(questions, 170);
+    doc.text(lines, 20, 60);
+
+    doc.save("smart_exam.pdf");
+  }
+
+  function generateQuestions() {
+    const text = document.getElementById("manual-input").value;
+    const difficulty = document.getElementById("difficulty-select").value;
+    const count = document.getElementById("question-count").value;
+
+    if (!text.trim()) {
+      alert("Please upload a file or paste some content first.");
+      return;
+    }
+
+    fetch("http://127.0.0.1:5000/generate_questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, difficulty, count })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.questions) {
+          document.getElementById("generated-questions").textContent = data.questions;
+        } else {
+          document.getElementById("generated-questions").textContent = "❌ An error occurred generating questions.";
+        }
+      })
+      .catch(err => {
+        document.getElementById("generated-questions").textContent = "⚠️ Server error: " + err.message;
+      });
+  }
+</script>
+
+<!-- Move the controls into a wrapper inside the generator section to keep it above the footer -->
+<section class="section-divider bg-white text-center border-top pt-5 pb-5">
+  <div class="container">
+    <div class="d-flex justify-content-center align-items-end gap-3 mb-4">
+      <div class="w-auto">
+        <label for="question-count" class="form-label mb-1">How many questions?</label>
+        <select id="question-count" class="form-select">
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+          <option value="10">10</option>
+        </select>
+      </div>
+      <div class="w-auto">
+        <button class="btn btn-outline-dark mt-4" onclick="downloadPDF()">📥 Download as PDF</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+
+</body>
+</html>
