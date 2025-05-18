@@ -1,0 +1,6 @@
+Flask
+Flash-Cors
+openai
+PyMuPDF
+gunicorn
+
